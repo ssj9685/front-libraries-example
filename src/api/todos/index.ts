@@ -43,6 +43,23 @@ const useCreate = () => {
 
   return useMutation({
     mutationFn: create,
+    async onMutate(newTodo) {
+      await queryClient.cancelQueries({ queryKey: [key] });
+      const previousTodos = queryClient.getQueryData([key]);
+      queryClient.setQueryData([key], (old: FindAllTodoDto) => ({
+        items: [...old.items, newTodo],
+        totalCount: old.totalCount,
+      }));
+
+      return {
+        rollback: () => {
+          queryClient.setQueryData([key], previousTodos);
+        },
+      };
+    },
+    onError(err, newTodo, context) {
+      context?.rollback();
+    },
     onSettled() {
       queryClient.invalidateQueries({
         queryKey: [key],
