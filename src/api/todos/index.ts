@@ -16,14 +16,22 @@ interface CreateDto {
   completed: boolean;
 }
 
+interface UpdateDto {
+  todoId: string;
+  completed: boolean;
+}
+
 interface FindAllTodoDto {
   totalCount: number;
   items: Todo[];
 }
 
-const findAll = () => axios.get<FindAllTodoDto[]>(url).then((res) => res.data);
+const findAll = () => axios.get<FindAllTodoDto>(url).then((res) => res.data);
 const create = (data: CreateDto) =>
   axios.post(url, data).then((res) => res.data);
+const remove = (id: string) =>
+  axios.delete(`${url}/${id}`).then((res) => res.data);
+const update = (data: UpdateDto) => axios.patch(`${url}/${data.todoId}`, data);
 
 const useFindAll = () =>
   useQuery({
@@ -31,12 +39,6 @@ const useFindAll = () =>
     queryFn: findAll,
     staleTime: Infinity,
   });
-
-const useGet = () => {
-  const queryClient = useQueryClient();
-
-  return queryClient.getQueryData<FindAllTodoDto>([key]);
-};
 
 const useCreate = () => {
   const queryClient = useQueryClient();
@@ -68,10 +70,37 @@ const useCreate = () => {
   });
 };
 
+const useUpdate = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: update,
+    onSettled() {
+      queryClient.invalidateQueries({
+        queryKey: [key],
+      });
+    },
+  });
+};
+
+const useRemove = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: remove,
+    onSettled() {
+      queryClient.invalidateQueries({
+        queryKey: [key],
+      });
+    },
+  });
+};
+
 export const todoQuery = {
   key,
   url,
   useFindAll,
-  useGet,
   useCreate,
+  useUpdate,
+  useRemove,
 };
