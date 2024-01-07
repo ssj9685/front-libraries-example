@@ -1,8 +1,8 @@
 const client = typeof window !== "undefined";
 
 export const COOKIE_NAME = {
-  accessToken: "accessToken",
-  refreshToken: "refreshToken",
+  ACCESS_TOKEN: "accessToken",
+  REFRESH_TOKEN: "refreshToken",
 } as const;
 
 type ValueOf<T> = T[keyof T];

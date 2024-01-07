@@ -1,49 +1,83 @@
 import { kakaoApi } from "@/api/kakao";
 import { COOKIE_NAME, cookieUtil } from "@/util/cookie";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
-const { accessToken, refreshToken } = COOKIE_NAME;
+const { ACCESS_TOKEN, REFRESH_TOKEN } = COOKIE_NAME;
 
-const setTokenInCookie = (data: { [x: string]: any }) => {
-  const { access_token, refresh_token, expires_in, refresh_token_expires_in } =
-    data;
+const KakaoLoginPage = () => {
+  const [userInfo, setUserInfo] = useState<{ id: number }>();
+  const [tokenInfo, setTokenInfo] = useState<{
+    expiresInMillis: number;
+    id: number;
+    expires_in: number;
+    app_id: number;
+    appId: number;
+  }>();
 
-  cookieUtil.setCookie(accessToken, access_token, {
-    "max-age": expires_in,
-  });
+  const handleGetToken = async (code: string) => {
+    const {
+      access_token,
+      expires_in,
+      refresh_token,
+      refresh_token_expires_in,
+    } = await kakaoApi.getToken(code);
 
-  cookieUtil.setCookie(refreshToken, refresh_token, {
-    "max-age": refresh_token_expires_in,
-  });
-};
+    cookieUtil.setCookie(ACCESS_TOKEN, access_token, {
+      "max-age": expires_in,
+    });
 
-const KakaoLoginTestPage = () => {
+    cookieUtil.setCookie(REFRESH_TOKEN, refresh_token, {
+      "max-age": refresh_token_expires_in,
+    });
+  };
+
+  const handleLogout = () => {
+    cookieUtil.deleteCookie(ACCESS_TOKEN);
+    cookieUtil.deleteCookie(REFRESH_TOKEN);
+  };
+
+  const handleGetTokenInfo = async () => {
+    const result = await kakaoApi.getTokenInfo();
+
+    setTokenInfo(result);
+  };
+
+  const handleGetUserInfo = async () => {
+    const result = await kakaoApi.getUserInfo();
+
+    setUserInfo(result);
+  };
+
   useEffect(() => {
-    if (!cookieUtil.getCookie(accessToken)) {
-      const search = new URLSearchParams(window.location.search);
-      const code = search.get("code") ?? "";
-      kakaoApi.getToken(code).then(setTokenInCookie);
+    const search = new URLSearchParams(window.location.search);
+    const code = search.get("code");
+    const accessToken = cookieUtil.getCookie(ACCESS_TOKEN);
+
+    if (code && !accessToken) {
+      handleGetToken(code);
     }
   }, []);
 
   return (
-    <>
-      <div>
-        <div>kakao login page</div>
-        <a href={kakaoApi.authorizeUrl}>로그인하기</a>
-        <br />
-        <button
-          onClick={async () => {
-            const result = await kakaoApi.getTokenInfo();
-
-            console.log(result);
-          }}
-        >
-          토큰 검증
-        </button>
-      </div>
-    </>
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        gap: "8px",
+      }}
+    >
+      <a href={kakaoApi.getAuthorizeUrl()}>로그인</a>
+      <a onClick={handleLogout} href={kakaoApi.getLogoutUrl()}>
+        로그아웃
+      </a>
+      <button onClick={handleGetTokenInfo}>
+        토큰 검증: {JSON.stringify(tokenInfo)}
+      </button>
+      <button onClick={handleGetUserInfo}>
+        유저 정보 {JSON.stringify(userInfo)}
+      </button>
+    </div>
   );
 };
 
-export default KakaoLoginTestPage;
+export default KakaoLoginPage;

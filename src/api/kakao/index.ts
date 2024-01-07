@@ -1,37 +1,59 @@
+import { rest_api_app_key, redirect_uri } from "@/const";
 import { COOKIE_NAME, cookieUtil } from "@/util/cookie";
 
-const clientId = "77d5206d0ebe68b33f80bf59f1c7a2eb";
-const redirectUri = "http://localhost:3000/kakao-login";
-const responseType = "code";
+const { ACCESS_TOKEN } = COOKIE_NAME;
 
-const { accessToken, refreshToken } = COOKIE_NAME;
+const getAuthorizeUrl = () => {
+  const url = "https://kauth.kakao.com/oauth/authorize";
+  const query = new URLSearchParams({
+    client_id: rest_api_app_key,
+    redirect_uri,
+    response_type: "code",
+  });
 
-const authorizeParam = new URLSearchParams({
-  client_id: clientId,
-  redirect_uri: redirectUri,
-  response_type: responseType,
-});
+  return `${url}?${query.toString()}`;
+};
 
-const authorizeUrl = `https://kauth.kakao.com/oauth/authorize?${authorizeParam.toString()}`;
+const getLogoutUrl = () => {
+  const url = "https://kauth.kakao.com/oauth/logout";
+  const query = new URLSearchParams({
+    client_id: rest_api_app_key,
+    logout_redirect_uri: redirect_uri,
+  });
+
+  return `${url}?${query.toString()}`;
+};
 
 const getToken = async (code: string) => {
-  if (!code) return;
-
-  const url = "https://kauth.kakao.com/oauth/token";
-
-  const param = {
+  const param = new URLSearchParams({
     grant_type: "authorization_code",
-    client_id: clientId,
-    redirect_uri: redirectUri,
+    client_id: rest_api_app_key,
+    redirect_uri,
     code,
-  };
+  });
 
-  const response = await fetch(url, {
+  const response = await fetch("https://kauth.kakao.com/oauth/token", {
     method: "POST",
     headers: {
       "Content-type": "application/x-www-form-urlencoded;charset=utf-8",
     },
-    body: new URLSearchParams(param).toString(),
+    body: param.toString(),
+  });
+
+  const result = await response.json();
+
+  return result;
+};
+
+const getUserInfo = async () => {
+  const accessToken = cookieUtil.getCookie(ACCESS_TOKEN);
+
+  const response = await fetch("https://kapi.kakao.com/v2/user/me", {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "Content-type": "application/x-www-form-urlencoded;charset=utf-8",
+    },
   });
 
   const result = await response.json();
@@ -41,7 +63,7 @@ const getToken = async (code: string) => {
 
 const getTokenInfo = async () => {
   const url = "https://kapi.kakao.com/v1/user/access_token_info";
-  const token = cookieUtil.getCookie(COOKIE_NAME.accessToken);
+  const token = cookieUtil.getCookie(ACCESS_TOKEN);
 
   const response = await fetch(url, {
     method: "GET",
@@ -50,18 +72,15 @@ const getTokenInfo = async () => {
     },
   });
 
-  if (response.status !== 200) {
-    cookieUtil.deleteCookie(accessToken);
-    cookieUtil.deleteCookie(refreshToken);
-  }
-
   const result = await response.json();
 
   return result;
 };
 
 export const kakaoApi = {
-  authorizeUrl,
+  getAuthorizeUrl,
+  getLogoutUrl,
   getToken,
   getTokenInfo,
+  getUserInfo,
 };
