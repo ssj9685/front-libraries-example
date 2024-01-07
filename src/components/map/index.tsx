@@ -1,59 +1,50 @@
 //@ts-nocheck
-import { javascript_app_key } from "@/const";
-import { useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 
 const KakaoMap = () => {
+  const kakaoMapRef = useRef();
+  const mapRef = useRef(null);
+  const [latlng, setlatlng] = useState();
+
   useEffect(() => {
-    const kakaoMapScript = document.createElement("script");
-    kakaoMapScript.async = false;
-    kakaoMapScript.src = `//dapi.kakao.com/v2/maps/sdk.js?appkey=${javascript_app_key}&autoload=false`;
-    document.head.appendChild(kakaoMapScript);
+    if (kakaoMapRef.current) return;
 
-    const onLoadKakaoAPI = () => {
-      window.kakao.maps.load(() => {
-        var mapContainer = document.getElementById("map"),
-          mapOption = {
-            center: new window.kakao.maps.LatLng(33.450701, 126.570667),
-            level: 3,
-          };
+    kakaoMapRef.current = window.kakao.maps;
 
-        var map = new window.kakao.maps.Map(mapContainer, mapOption);
+    const kakaoMap = kakaoMapRef.current;
 
-        var marker = new window.kakao.maps.Marker({
-          map,
-          position: map.getCenter(),
-        });
-
-        new window.kakao.maps.Marker({
-          map,
-          position: new kakao.maps.LatLng(33.450936, 126.569477),
-        });
-
-        window.kakao.maps.event.addListener(
-          map,
-          "click",
-          function (mouseEvent) {
-            var latlng = mouseEvent.latLng;
-
-            marker.setPosition(latlng);
-
-            var message = "클릭한 위치의 위도는 " + latlng.getLat() + " 이고, ";
-            message += "경도는 " + latlng.getLng() + " 입니다";
-
-            var resultDiv = document.getElementById("clickLatlng");
-            resultDiv.innerHTML = message;
-          }
-        );
+    kakaoMap.load(() => {
+      const map = new kakaoMap.Map(mapRef.current, {
+        center: new kakaoMap.LatLng(33.450701, 126.570667),
+        level: 3,
       });
-    };
 
-    kakaoMapScript.addEventListener("load", onLoadKakaoAPI);
+      const marker = new kakaoMap.Marker({
+        map,
+        position: map.getCenter(),
+      });
+
+      new kakaoMap.Marker({
+        map,
+        position: new kakao.maps.LatLng(33.450936, 126.569477),
+      });
+
+      kakaoMap.event.addListener(map, "click", (mouseEvent) => {
+        const latlng = mouseEvent.latLng;
+
+        marker.setPosition(latlng);
+
+        const message = `클릭한 위치의 위도는 ${latlng.getLat()}이고, 경도는 ${latlng.getLng()}`;
+        setlatlng(message);
+      });
+    });
   }, []);
 
   return (
     <>
-      <div id="clickLatlng"></div>
+      <div>{latlng}</div>
       <div
+        ref={mapRef}
         id="map"
         style={{
           width: "100vw",
